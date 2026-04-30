@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MyMarnie · Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Architects+Daughter&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  * { box-sizing: border-box; }
+  /* iOS frame already supplies a status bar — hide the wireframe's */
+  .hide-wf-statusbar [data-wf-statusbar] { display: none !important; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="wireframe-primitives.jsx"></script>
+<script type="text/babel" src="screens-splash.jsx"></script>
+<script type="text/babel" src="screens-login.jsx"></script>
+<script type="text/babel" src="screens-dashboard.jsx"></script>
+<script type="text/babel" src="screens-food.jsx"></script>
+<script type="text/babel" src="screens-health.jsx"></script>
+<script type="text/babel" src="screens-iq.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "splashVariant": "C",
+  "loginVariant": "A",
+  "dashVariant": "A",
+  "foodSubTab": "diary",
+  "iqView": "feed",
+  "iqCompose": false,
+  "showFrame": true
+}/*EDITMODE-END*/;
+
+// Phone screen size (inside iOS frame is 360x720 area)
+const PHONE_W = 360;
+const PHONE_H = 720;
+
+// A "screen holder" that optionally wraps in iOS frame
+// When framed, we hide the wireframe's own status bar (iOS frame provides one)
+function PhoneFrame({ children, label, showFrame }) {
+  if (showFrame) {
+    return (
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={false}>
+        <div className="hide-wf-statusbar" style={{ width: '100%', height: '100%', position: 'relative' }}>
+          {children}
+        </div>
+      </IOSDevice>
+    );
+  }
+  return (
+    <div style={{
+      width: PHONE_W, height: PHONE_H, background: wfPaper,
+      borderRadius: 28, overflow: 'hidden', position: 'relative',
+      border: `1.5px solid ${wfInk}`, boxShadow: '0 16px 40px rgba(0,0,0,0.1)'
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// Map variant letter → component
+const splashes = { A: SplashA, B: SplashB, C: SplashC };
+const logins = { A: LoginA, B: LoginB, C: LoginC };
+const dashes = { A: DashA, B: DashB, C: DashC };
+
+// FLOW canvas — splash → login → dash with arrows
+function FlowCanvas({ splashV, loginV, dashV, showFrame }) {
+  const Splash = splashes[splashV];
+  const Login = logins[loginV];
+  const Dash = dashes[dashV];
+
+  const FRAME_W = showFrame ? 402 : 360;
+  const FRAME_H = showFrame ? 874 : 720;
+  const GAP = 180; // arrow gap
+  const PAD = 80;
+
+  const TOP_Y = 220; // pushed down so the page title + per-screen labels don't collide
+  const positions = [
+    { x: PAD, y: TOP_Y },
+    { x: PAD + FRAME_W + GAP, y: TOP_Y },
+    { x: PAD + (FRAME_W + GAP) * 2, y: TOP_Y },
+    { x: PAD + (FRAME_W + GAP) * 3, y: TOP_Y },
+  ];
+
+  // Arrow start = right edge of frame, end = left edge of next frame
+  const arrows = [
+    { from: { x: positions[0].x + FRAME_W + 6, y: positions[0].y + FRAME_H / 2 },
+      to:   { x: positions[1].x - 12,           y: positions[1].y + FRAME_H / 2 },
+      label: 'tap to begin' },
+    { from: { x: positions[1].x + FRAME_W + 6, y: positions[1].y + FRAME_H / 2 },
+      to:   { x: positions[2].x - 12,           y: positions[2].y + FRAME_H / 2 },
+      label: 'auth ✓' },
+    { from: { x: positions[2].x + FRAME_W + 6, y: positions[2].y + 90 },
+      to:   { x: positions[3].x - 12,           y: positions[3].y + 90 },
+      label: 'tap ⚙' },
+  ];
+
+  const totalW = PAD * 2 + FRAME_W * 4 + GAP * 3;
+  const totalH = TOP_Y + FRAME_H + 280;
+
+  return (
+    <div style={{ position: 'relative', width: totalW, height: totalH, background: 'transparent' }}>
+      {/* Title */}
+      <div style={{ position: 'absolute', top: 28, left: PAD, fontFamily: '"Caveat", cursive', fontWeight: 700, color: wfInk }}>
+        <div style={{ fontSize: 44, lineHeight: 1 }}>MyMarnie · core flow</div>
+        <div style={{ fontFamily: '"Architects Daughter", cursive', fontSize: 14, color: wfMuted, marginTop: 6 }}>
+          v1 · splash → login → main dashboard · use Tweaks to cycle variations
+        </div>
+      </div>
+
+      {/* Screen labels above each frame */}
+      {[
+        { idx: 0, num: '01', name: 'Splash', sub: 'first impression · ~1.5s' },
+        { idx: 1, num: '02', name: 'Login',  sub: 'Apple or Google SSO' },
+        { idx: 2, num: '03', name: 'Home',   sub: 'dashboard + tab bar' },
+        { idx: 3, num: '04', name: 'Settings', sub: 'profile, prefs, logout' },
+      ].map((s) => (
+        <div key={s.idx} style={{ position: 'absolute', top: positions[s.idx].y - 56, left: positions[s.idx].x, width: FRAME_W }}>
+          <div style={{ fontFamily: '"Architects Daughter", cursive', fontSize: 11, color: wfMuted, letterSpacing: 1 }}>
+            {s.num}
+          </div>
+          <div style={{ fontFamily: '"Caveat", cursive', fontSize: 28, color: wfInk, fontWeight: 700, lineHeight: 1 }}>
+            {s.name}
+          </div>
+          <div style={{ fontFamily: '"Architects Daughter", cursive', fontSize: 12, color: wfMuted, marginTop: 2 }}>
+            {s.sub}
+          </div>
+        </div>
+      ))}
+
+      {/* Frames */}
+      <div style={{ position: 'absolute', left: positions[0].x, top: positions[0].y }} data-screen-label="01 Splash">
+        <PhoneFrame showFrame={showFrame}><Splash /></PhoneFrame>
+      </div>
+      <div style={{ position: 'absolute', left: positions[1].x, top: positions[1].y }} data-screen-label="02 Login">
+        <PhoneFrame showFrame={showFrame}><Login /></PhoneFrame>
+      </div>
+      <div style={{ position: 'absolute', left: positions[2].x, top: positions[2].y }} data-screen-label="03 Home">
+        <PhoneFrame showFrame={showFrame}><Dash /></PhoneFrame>
+      </div>
+
+      {/* Arrows between */}
+      {arrows.map((a, i) => (
+        <WfArrow key={i} from={a.from} to={a.to} label={a.label} />
+      ))}
+
+      {/* Annotations */}
+      <WfNote top={positions[0].y + FRAME_H + 30} left={positions[0].x + 20} width={FRAME_W - 40} rotate={-1.5}>
+        ↑ photo of Marnie hero — sets the warm, personal tone right away
+      </WfNote>
+      <WfNote top={positions[1].y + FRAME_H + 30} left={positions[1].x + 20} width={FRAME_W - 40} rotate={1}>
+        ↑ no email/password — Apple &amp; Google only · zero friction
+      </WfNote>
+      <WfNote top={positions[2].y + FRAME_H + 30} left={positions[2].x + 20} width={FRAME_W - 40} rotate={-1}>
+        ↑ Home dashboard · cog (top-right) opens Settings · 4 tabs: Home · Food · Health · IQ
+      </WfNote>
+      <WfNote top={positions[3].y + FRAME_H + 30} left={positions[3].x + 20} width={FRAME_W - 40} rotate={1.2}>
+        ↑ Settings · profile, app prefs, data, logout
+      </WfNote>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  return (
+    <div>
+      <DesignCanvas>
+        <DCSection id="flow" title="Core flow" subtitle="splash → login → home">
+          <DCArtboard id="flow" label="Flow · v1"
+            width={(t.showFrame ? 402 : 360) * 4 + 180 * 3 + 160}
+            height={220 + (t.showFrame ? 874 : 720) + 280}>
+            <FlowCanvas splashV={t.splashVariant} loginV={t.loginVariant} dashV={t.dashVariant} showFrame={t.showFrame} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="splash-variants" title="Splash · variations" subtitle="A · photo medallion   B · full-bleed   C · polaroid">
+          {['A','B','C'].map(v => {
+            const C = splashes[v];
+            return (
+              <DCArtboard key={v} id={`s-${v}`} label={`Splash · ${v}`}
+                width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+                <PhoneFrame showFrame={t.showFrame}><C /></PhoneFrame>
+              </DCArtboard>
+            );
+          })}
+        </DCSection>
+
+        <DCSection id="login-variants" title="Login · variations" subtitle="A · stacked   B · card   C · photo + buttons">
+          {['A','B','C'].map(v => {
+            const C = logins[v];
+            return (
+              <DCArtboard key={v} id={`l-${v}`} label={`Login · ${v}`}
+                width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+                <PhoneFrame showFrame={t.showFrame}><C /></PhoneFrame>
+              </DCArtboard>
+            );
+          })}
+        </DCSection>
+
+        <DCSection id="dash-variants" title="Home · variations" subtitle="A · hero + quick add   B · stat cards   C · journal timeline">
+          {['A','B','C'].map(v => {
+            const C = dashes[v];
+            return (
+              <DCArtboard key={v} id={`d-${v}`} label={`Home · ${v}`}
+                width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+                <PhoneFrame showFrame={t.showFrame}><C /></PhoneFrame>
+              </DCArtboard>
+            );
+          })}
+        </DCSection>
+
+        <DCSection id="food" title="Food tab" subtitle="tabs at top: Diary · Menu · Analytics — tap to switch (or use Tweaks)">
+          <DCArtboard id="food-live" label={`Food · ${t.foodSubTab}`}
+            width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+            <PhoneFrame showFrame={t.showFrame}>
+              <FoodScreen subTab={t.foodSubTab} onSubTabChange={(v) => setTweak('foodSubTab', v)} />
+            </PhoneFrame>
+          </DCArtboard>
+          {['diary','menu','analytics'].map(sub => (
+            <DCArtboard key={sub} id={`food-${sub}`} label={`Food · ${sub}`}
+              width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+              <PhoneFrame showFrame={t.showFrame}>
+                <FoodScreen subTab={sub} />
+              </PhoneFrame>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        <DCSection id="health" title="Health tab" subtitle="endless scroll log · vaccinations, vet visits, tick treatments, meds, weigh-ins, grooming">
+          <DCArtboard id="health-live" label="Health · log"
+            width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+            <PhoneFrame showFrame={t.showFrame}>
+              <HealthScreen />
+            </PhoneFrame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="iq" title="IQ tab" subtitle="Marnie's diary · photo + event feed · endless scroll · filter chips · big add button">
+          <DCArtboard id="iq-feed" label="IQ · feed"
+            width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+            <PhoneFrame showFrame={t.showFrame}>
+              <IqScreen />
+            </PhoneFrame>
+          </DCArtboard>
+          <DCArtboard id="iq-grid" label="IQ · grid view"
+            width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+            <PhoneFrame showFrame={t.showFrame}>
+              <IqScreenForced view="grid" />
+            </PhoneFrame>
+          </DCArtboard>
+          <DCArtboard id="iq-compose" label="IQ · new post sheet"
+            width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+            <PhoneFrame showFrame={t.showFrame}>
+              <IqScreen initialCompose={true} />
+            </PhoneFrame>
+          </DCArtboard>
+          <DCArtboard id="iq-filtered" label="IQ · filtered (walks + tricks)"
+            width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+            <PhoneFrame showFrame={t.showFrame}>
+              <IqScreenForced presetFilters={['walk','trick']} />
+            </PhoneFrame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="settings" title="Settings" subtitle="reached via cog icon on Home · profile, app prefs, data, logout">
+          <DCArtboard id="settings" label="Settings"
+            width={t.showFrame ? 402 : 360} height={t.showFrame ? 874 : 720}>
+            <PhoneFrame showFrame={t.showFrame}><SettingsScreen /></PhoneFrame>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Flow variations" />
+        <TweakRadio label="Splash" value={t.splashVariant} options={['A','B','C']}
+          onChange={(v) => setTweak('splashVariant', v)} />
+        <TweakRadio label="Login" value={t.loginVariant} options={['A','B','C']}
+          onChange={(v) => setTweak('loginVariant', v)} />
+        <TweakRadio label="Home" value={t.dashVariant} options={['A','B','C']}
+          onChange={(v) => setTweak('dashVariant', v)} />
+        <TweakSection label="IQ tab" />
+        <TweakRadio label="View" value={t.iqView} options={['feed','grid']}
+          onChange={(v) => setTweak('iqView', v)} />
+        <TweakToggle label="Compose sheet open" value={t.iqCompose}
+          onChange={(v) => setTweak('iqCompose', v)} />
+        <TweakSection label="Food tab" />
+        <TweakRadio label="Sub-tab" value={t.foodSubTab} options={['diary','menu','analytics']}
+          onChange={(v) => setTweak('foodSubTab', v)} />
+        <TweakSection label="Frame" />
+        <TweakToggle label="iPhone bezel" value={t.showFrame}
+          onChange={(v) => setTweak('showFrame', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
